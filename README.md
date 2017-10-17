@@ -1,6 +1,6 @@
 # HardNet model implementation
 
-HardNet model implementation in PyTorch for paper ["Working hard to know your neighbor's margins: Local descriptor learning loss"](https://arxiv.org/abs/1705.10872)
+HardNet model implementation in PyTorch for NIPS 2017 paper ["Working hard to know your neighbor's margins: Local descriptor learning loss"](https://arxiv.org/abs/1705.10872)
 
 ## Requirements
 
@@ -26,7 +26,7 @@ Pre-trained models can be found in folder pretrained:  train_liberty and train_l
 We provide an example, how to describe patches with HardNet. Script expects patches in [HPatches](https://github.com/hpatches/hpatches-benchmark) format, i.e. grayscale image with w = patch_size and h = n_patches * patch_size
 ```
 cd examples
-./extract_hardnet_desc_from_hpatches_file.py imgs/ref.png out.txt
+python extract_hardnet_desc_from_hpatches_file.py imgs/ref.png out.txt
 ```
 or with Caffe:
 ```    
@@ -41,6 +41,8 @@ Please cite us if you use this code:
 ```
 @article{HardNet2017,
  author = {Anastasiya Mishchuk, Dmytro Mishkin, Filip Radenovic, Jiri Matas},
-    title = "{Working hard to know your neighbor's margins:Local descriptor learning loss}",
-     year = 2017}
+    title = "{Working hard to know your neighbor's margins: Local descriptor learning loss}",
+    booktitle = {Proceedings of NIPS},
+     year = 2017,
+    month = dec}
 ```

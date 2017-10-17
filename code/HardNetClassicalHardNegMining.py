@@ -1,5 +1,6 @@
-#!/usr/bin/python2 -utt
+﻿#!/usr/bin/python2 -utt
 #-*- coding: utf-8 -*-
+
 """
 This is HardNet local patch descriptor. The training code is based on PyTorch TFeat implementation
 https://github.com/edgarriba/examples/tree/master/triplet
@@ -32,57 +33,42 @@ import random
 import cv2
 import copy
 from EvalMetrics import ErrorRateAt95Recall
-from Losses import loss_HardNet, loss_random_sampling, loss_L2Net, global_orthogonal_regularization
+from Loggers import Logger, FileLogger
 from W1BS import w1bs_extract_descs_and_save
 from Utils import L2Norm, cv2_scale, np_reshape
 from Utils import str2bool
-import torch.nn as nn
+import torch.utils.data as data
+import torch.utils.data as data_utils
 import torch.nn.functional as F
 
-class CorrelationPenaltyLoss(nn.Module):
-    def __init__(self):
-        super(CorrelationPenaltyLoss, self).__init__()
-
-    def forward(self, input):
-        mean1 = torch.mean(input, dim=0)
-        zeroed = input - mean1.expand_as(input)
-        cor_mat = torch.bmm(torch.t(zeroed).unsqueeze(0), zeroed.unsqueeze(0)).squeeze(0)
-        d = torch.diag(torch.diag(cor_mat))
-        no_diag = cor_mat - d
-        d_sq = no_diag * no_diag
-        return torch.sqrt(d_sq.sum())/input.size(0)
+sys.path.insert(0, '/home/old-ufo/dev/faiss/')
+import faiss
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch HardNet')
 # Model options
 
 parser.add_argument('--w1bsroot', type=str,
-                    default='../wxbs-descriptors-benchmark/code',
+                    default='wxbs-descriptors-benchmark/code',
                     help='path to dataset')
 parser.add_argument('--dataroot', type=str,
-                    default='../datasets/',
+                    default='datasets/',
                     help='path to dataset')
-parser.add_argument('--enable-logging',type=bool, default=False,
-                    help='output to tensorlogger')
-parser.add_argument('--log-dir', default='../logs',
-                    help='folder to output log')
-parser.add_argument('--model-dir', default='../models',
+parser.add_argument('--resume', default='', type=str, metavar='PATH',
+                    help='path to latest checkpoint (default: none)')
+parser.add_argument('--enable-logging',type=bool, default=True,
                     help='folder to output model checkpoints')
-parser.add_argument('--experiment-name', default= '/liberty_train/',
+parser.add_argument('--log-dir', default='./logs',
+                    help='folder to output model checkpoints')
+parser.add_argument('--experiment-name', default= '/liberty_train_hard_mining/',
                     help='experiment path')
 parser.add_argument('--training-set', default= 'liberty',
                     help='Other options: notredame, yosemite')
-parser.add_argument('--loss', default= 'triplet_margin',
-                    help='Other options: softmax, contrastive')
-parser.add_argument('--batch-reduce', default= 'min',
-                    help='Other options: average, random, random_global, L2Net')
-parser.add_argument('--num-workers', default= 1,
+parser.add_argument('--num-workers', default= 8,
                     help='Number of workers to be created')
 parser.add_argument('--pin-memory',type=bool, default= True,
                     help='')
-parser.add_argument('--decor',type=str2bool, default = False,
-                    help='L2Net decorrelation penalty')
-parser.add_argument('--anchorave', type=str2bool, default=False,
+parser.add_argument('--anchorave', type=bool, default=False,
                     help='anchorave')
 parser.add_argument('--imageSize', type=int, default=32,
                     help='the height / width of the input image to network')
@@ -90,8 +76,6 @@ parser.add_argument('--mean-image', type=float, default=0.443728476019,
                     help='mean of train dataset for normalization')
 parser.add_argument('--std-image', type=float, default=0.20197947209,
                     help='std of train dataset for normalization')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('--epochs', type=int, default=10, metavar='E',
@@ -99,17 +83,13 @@ parser.add_argument('--epochs', type=int, default=10, metavar='E',
 parser.add_argument('--anchorswap', type=bool, default=True,
                     help='turns on anchor swap')
 parser.add_argument('--batch-size', type=int, default=1024, metavar='BS',
-                    help='input batch size for training (default: 1024)')
+                    help='input batch size for training (default: 128)')
 parser.add_argument('--test-batch-size', type=int, default=1024, metavar='BST',
-                    help='input batch size for testing (default: 1024)')
+                    help='input batch size for testing (default: 1000)')
 parser.add_argument('--n-triplets', type=int, default=5000000, metavar='N',
                     help='how many triplets will generate from the dataset')
 parser.add_argument('--margin', type=float, default=1.0, metavar='MARGIN',
                     help='the margin value for the triplet loss function (default: 1.0')
-parser.add_argument('--gor',type=str2bool, default=False,
-                    help='use gor')
-parser.add_argument('--alpha', type=float, default=1.0, metavar='ALPHA',
-                    help='gor parameter')
 parser.add_argument('--act-decay', type=float, default=0,
                     help='activity L2 decay, default 0')
 parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
@@ -134,20 +114,8 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='LI',
 
 args = parser.parse_args()
 
-suffix = '{}_{}'.format(args.training_set, args.batch_reduce)
-
-if args.gor:
-    suffix = suffix+'_gor_alpha{:1.1f}'.format(args.alpha)
-if args.anchorswap:
-    suffix = suffix + '_as'
-if args.anchorave:
-    suffix = suffix + '_av'
-
-triplet_flag = (args.batch_reduce == 'random_global') or args.gor 
-
 dataset_names = ['liberty', 'notredame', 'yosemite']
 
-TEST_ON_W1BS = False
 # check if path to w1bs dataset testing module exists
 if os.path.isdir(args.w1bsroot):
     sys.path.insert(0, args.w1bsroot)
@@ -164,24 +132,23 @@ if args.cuda:
     cudnn.benchmark = True
     torch.cuda.manual_seed_all(args.seed)
 
+LOG_DIR = args.log_dir + args.experiment_name
 # create loggin directory
-if not os.path.exists(args.log_dir):
-    os.makedirs(args.log_dir)
-
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
 # set random seeds
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
 class TripletPhotoTour(dset.PhotoTour):
-    """
-    From the PhotoTour Dataset it generates triplet samples
+    """From the PhotoTour Dataset it generates triplet samples
     note: a triplet is composed by a pair of matching images and one of
     different class.
     """
-    def __init__(self, train=True, transform=None, batch_size = None,load_random_triplets = False,  *arg, **kw):
+    def __init__(self, train=True, transform=None, batch_size = None, *arg, **kw):
         super(TripletPhotoTour, self).__init__(*arg, **kw)
         self.transform = transform
-        self.out_triplets = load_random_triplets
+
         self.train = train
         self.n_triplets = args.n_triplets
         self.batch_size = batch_size
@@ -245,27 +212,22 @@ class TripletPhotoTour(dset.PhotoTour):
 
         img_a = transform_img(a)
         img_p = transform_img(p)
-        img_n = None
-        if self.out_triplets:
-            img_n = transform_img(n)
+        img_n = transform_img(n)
+
         # transform images if required
-        if args.fliprot:
-            do_flip = random.random() > 0.5
-            do_rot = random.random() > 0.5
-            if do_rot:
-                img_a = img_a.permute(0,2,1)
-                img_p = img_p.permute(0,2,1)
-                if self.out_triplets:
-                    img_n = img_n.permute(0,2,1)
-            if do_flip:
-                img_a = torch.from_numpy(deepcopy(img_a.numpy()[:,:,::-1]))
-                img_p = torch.from_numpy(deepcopy(img_p.numpy()[:,:,::-1]))
-                if self.out_triplets:
-                    img_n = torch.from_numpy(deepcopy(img_n.numpy()[:,:,::-1]))
-        if self.out_triplets:
-            return (img_a, img_p, img_n)
-        else:
-            return (img_a, img_p)
+        # if args.fliprot:
+        #     do_flip = random.random() > 0.5
+        #     do_rot = random.random() > 0.5
+        #
+        #     if do_rot:
+        #         img_a = img_a.permute(0,2,1)
+        #         img_p = img_p.permute(0,2,1)
+        #
+        #     if do_flip:
+        #         img_a = torch.from_numpy(deepcopy(img_a.numpy()[:,:,::-1]))
+        #         img_p = torch.from_numpy(deepcopy(img_p.numpy()[:,:,::-1]))
+
+        return img_a, img_p, img_n
 
     def __len__(self):
         if self.train:
@@ -273,59 +235,156 @@ class TripletPhotoTour(dset.PhotoTour):
         else:
             return self.matches.size(0)
 
-class HardNet(nn.Module):
-    """HardNet model definition
+class TripletPhotoTourHardNegatives(dset.PhotoTour):
+    """From the PhotoTour Dataset it generates triplet samples
+    note: a triplet is composed by a pair of matching images and one of
+    different class.
+    """
+    def __init__(self, negative_indices, train=True, transform=None, batch_size = None, *arg, **kw):
+        super(TripletPhotoTourHardNegatives, self).__init__(*arg, **kw)
+        self.transform = transform
+
+        self.train = train
+        self.n_triplets = args.n_triplets
+        self.negative_indices = negative_indices
+        self.batch_size = batch_size
+
+        if self.train:
+            print('Generating {} triplets'.format(self.n_triplets))
+            self.triplets = self.generate_triplets(self.labels, self.n_triplets, self.negative_indices)
+
+
+    @staticmethod
+    def generate_triplets(labels, num_triplets, negative_indices):
+        def create_indices(_labels):
+            inds = dict()
+            for idx, ind in enumerate(_labels):
+                if ind not in inds:
+                    inds[ind] = []
+                inds[ind].append(idx)
+            return inds
+
+        triplets = []
+        indices = create_indices(labels)
+        unique_labels = np.unique(labels.numpy())
+        n_classes = unique_labels.shape[0]
+
+        # add only unique indices in batch
+        already_idxs = set()
+        count  = 0
+        for x in tqdm(range(num_triplets)):
+            if len(already_idxs) >= args.batch_size:
+                already_idxs = set()
+            c1 = np.random.randint(0, n_classes - 1)
+            while c1 in already_idxs:
+                c1 = np.random.randint(0, n_classes - 1)
+            already_idxs.add(c1)
+            if len(indices[c1]) == 2:  # hack to speed up process
+                n1, n2 = 0, 1
+            else:
+                n1 = np.random.randint(0, len(indices[c1]) - 1)
+                n2 = np.random.randint(0, len(indices[c1]) - 1)
+                while n1 == n2:
+                    n2 = np.random.randint(0, len(indices[c1]) - 1)
+            indx = indices[c1][n1]
+            if(len(negative_indices[indx])>0):
+                negative_indx = random.choice(negative_indices[indx])
+            else:
+                count+=1
+                c2 = np.random.randint(0, n_classes - 1)
+                while c1 == c2:
+                    c2 = np.random.randint(0, n_classes - 1)
+                n3 = np.random.randint(0, len(indices[c2]) - 1)
+                negative_indx = indices[c2][n3]
+
+            already_idxs.add(c1)
+
+            triplets.append([indices[c1][n1], indices[c1][n2], negative_indx])
+
+        print(count)
+        print('triplets are generated. amount of triplets: {}'.format(len(triplets)))
+        return torch.LongTensor(np.array(triplets))
+
+
+
+    def __getitem__(self, index):
+        def transform_img(img):
+            if self.transform is not None:
+                img = self.transform(img.numpy())
+            return img
+
+        if not self.train:
+            m = self.matches[index]
+            img1 = transform_img(self.data[m[0]])
+            img2 = transform_img(self.data[m[1]])
+            return img1, img2, m[2]
+
+        t = self.triplets[index]
+        a, p, n = self.data[t[0]], self.data[t[1]], self.data[t[2]]
+
+        img_a = transform_img(a)
+        img_p = transform_img(p)
+        img_n = transform_img(n)
+
+        return img_a, img_p, img_n
+
+    def __len__(self):
+        if self.train:
+            return self.triplets.size(0)
+        else:
+            return self.matches.size(0)
+
+class TNet(nn.Module):
+    """TFeat model definition
     """
     def __init__(self):
-        super(HardNet, self).__init__()
+        super(TNet, self).__init__()
+
         self.features = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, padding=1, bias = False),
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
             nn.BatchNorm2d(32, affine=False),
             nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=3, padding=1, bias = False),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),
             nn.BatchNorm2d(32, affine=False),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1, bias = False),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(64, affine=False),
             nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1, bias = False),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64, affine=False),
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=2,padding=1, bias = False),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2,padding=1),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
-            nn.Conv2d(128, 128, kernel_size=3, padding=1, bias = False),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
             nn.BatchNorm2d(128, affine=False),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Conv2d(128, 128, kernel_size=8, bias = False),
+            nn.Conv2d(128, 128, kernel_size=8),
             nn.BatchNorm2d(128, affine=False),
+
         )
         self.features.apply(weights_init)
-        return
-    
-    def input_norm(self,x):
-        flat = x.view(x.size(0), -1)
+
+    def forward(self, input):
+        flat = input.view(input.size(0), -1)
         mp = torch.sum(flat, dim=1) / (32. * 32.)
         sp = torch.std(flat, dim=1) + 1e-7
-        return (x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
-    
-    def forward(self, input):
-        x_features = self.features(self.input_norm(input))
+        x_features = self.features(
+            (input - mp.unsqueeze(-1).unsqueeze(-1).expand_as(input)) / sp.unsqueeze(-1).unsqueeze(1).expand_as(input))
         x = x_features.view(x_features.size(0), -1)
         return L2Norm()(x)
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
         nn.init.orthogonal(m.weight.data, gain=0.7)
-        try:
-            nn.init.constant(m.bias.data, 0.01)
-        except:
-            pass
-    return
+        nn.init.constant(m.bias.data, 0.01)
+    if isinstance(m, nn.Linear):
+        nn.init.orthogonal(m.weight.data, gain=0.01)
+        nn.init.constant(m.bias.data, 0.)
 
-def create_loaders(load_random_triplets = False):
-    
+def create_loaders():
+
     test_dataset_names = copy.copy(dataset_names)
     test_dataset_names.remove(args.training_set)
 
@@ -337,16 +396,12 @@ def create_loaders(load_random_triplets = False):
             transforms.ToTensor(),
             transforms.Normalize((args.mean_image,), (args.std_image,))])
 
-    train_loader = torch.utils.data.DataLoader(
-            TripletPhotoTour(train=True,
-                             load_random_triplets = load_random_triplets,
+    trainPhotoTourDataset =  TripletPhotoTour(train=True,
                              batch_size=args.batch_size,
                              root=args.dataroot,
                              name=args.training_set,
                              download=True,
-                             transform=transform),
-                             batch_size=args.batch_size,
-                             shuffle=False, **kwargs)
+                             transform=transform)
 
     test_loaders = [{'name': name,
                      'dataloader': torch.utils.data.DataLoader(
@@ -360,65 +415,40 @@ def create_loaders(load_random_triplets = False):
                         shuffle=False, **kwargs)}
                     for name in test_dataset_names]
 
-    return train_loader, test_loaders
+    return trainPhotoTourDataset, test_loaders
 
-def train(train_loader, model, optimizer, epoch, logger, load_triplets  = False):
+def train(train_loader, model, optimizer, epoch, logger):
     # switch to train mode
     model.train()
     pbar = tqdm(enumerate(train_loader))
-    for batch_idx, data in pbar:
-        if load_triplets:
-            data_a, data_p, data_n = data
-        else:
-            data_a, data_p = data
+    for batch_idx, (data_a, data_p, data_n) in pbar:
 
         if args.cuda:
-            data_a, data_p  = data_a.cuda(), data_p.cuda()
-            data_a, data_p = Variable(data_a), Variable(data_p)
-            out_a, out_p = model(data_a), model(data_p)
+            data_a, data_p, data_n = data_a.cuda(), data_p.cuda(), data_n.cuda()
 
-        if load_triplets:
-            data_n  = data_n.cuda()
-            data_n = Variable(data_n)
-            out_n = model(data_n)
+        data_a, data_p, data_n = Variable(data_a), Variable(data_p), Variable(data_n)
 
-        if args.batch_reduce == 'L2Net':
-            loss = loss_L2Net(out_a, out_p, anchor_swap = args.anchorswap,
-                    margin = args.margin, loss_type = args.loss)
-        elif args.batch_reduce == 'random_global':
-            loss = loss_random_sampling(out_a, out_p, out_n,
-                margin=args.margin,
-                anchor_swap=args.anchorswap,
-                loss_type = args.loss)
-        else:
-            loss = loss_HardNet(out_a, out_p,
-                            margin=args.margin,
-                            anchor_swap=args.anchorswap,
-                            anchor_ave=args.anchorave,
-                            batch_reduce = args.batch_reduce,
-                            loss_type = args.loss)
+        out_a, out_p, out_n = model(data_a), model(data_p), model(data_n)
 
-        if args.decor:
-            loss += CorrelationPenaltyLoss()(out_a)
-            
-        if args.gor:
-            loss += args.alpha*global_orthogonal_regularization(out_a, out_n)
-            
+        #hardnet loss
+        loss = F.triplet_margin_loss(out_p, out_a, out_n, margin=args.margin, swap=args.anchorswap)
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         adjust_learning_rate(optimizer)
+        if(logger!=None):
+         logger.log_value('loss', loss.data[0]).step()
 
-    if (args.enable_logging):
-        logger.log_value('loss', loss.data[0]).step()
-
-    try:
-        os.stat('{}{}'.format(args.model_dir,suffix))
-    except:
-        os.makedirs('{}{}'.format(args.model_dir,suffix))
+        if batch_idx % args.log_interval == 0:
+            pbar.set_description(
+                'Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data_a), len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader),
+                    loss.data[0]))
 
     torch.save({'epoch': epoch + 1, 'state_dict': model.state_dict()},
-               '{}{}/checkpoint_{}.pth'.format(args.model_dir,suffix,epoch))
+               '{}/checkpoint_{}.pth'.format(LOG_DIR, epoch))
 
 def test(test_loader, model, epoch, logger, logger_test_name):
     # switch to evaluate mode
@@ -437,7 +467,7 @@ def test(test_loader, model, epoch, logger, logger_test_name):
 
         out_a, out_p = model(data_a), model(data_p)
         dists = torch.sqrt(torch.sum((out_a - out_p) ** 2, 1))  # euclidean distance
-        distances.append(dists.data.cpu().numpy().reshape(-1,1))
+        distances.append(dists.data.cpu().numpy())
         ll = label.data.cpu().numpy().reshape(-1, 1)
         labels.append(ll)
 
@@ -454,7 +484,8 @@ def test(test_loader, model, epoch, logger, logger_test_name):
     print('\33[91mTest set: Accuracy(FPR95): {:.8f}\n\33[0m'.format(fpr95))
 
     if (args.enable_logging):
-        logger.log_value(logger_test_name+' fpr95', fpr95)
+        if(logger!=None):
+            logger.log_value(logger_test_name+' fpr95', fpr95)
     return
 
 def adjust_learning_rate(optimizer):
@@ -484,12 +515,12 @@ def create_optimizer(model, new_lr):
     return optimizer
 
 
-def main(train_loader, test_loaders, model, logger, file_logger):
+def main(trainPhotoTourDataset, test_loaders, model, logger, file_logger):
     # print the experiment configuration
     print('\nparsed options:\n{}\n'.format(vars(args)))
 
-    #if (args.enable_logging):
-    #    file_logger.log_string('logs.txt', '\nparsed options:\n{}\n'.format(vars(args)))
+    if (args.enable_logging):
+        file_logger.log_string('logs.txt', '\nparsed options:\n{}\n'.format(vars(args)))
 
     if args.cuda:
         model.cuda()
@@ -506,30 +537,63 @@ def main(train_loader, test_loaders, model, logger, file_logger):
             model.load_state_dict(checkpoint['state_dict'])
         else:
             print('=> no checkpoint found at {}'.format(args.resume))
-            
-    
+
     start = args.start_epoch
     end = start + args.epochs
+
+    kwargs = {'num_workers': args.num_workers, 'pin_memory': args.pin_memory} if args.cuda else {}
+
+    transform = transforms.Compose([
+            transforms.Lambda(cv2_scale),
+            transforms.Lambda(np_reshape),
+            transforms.ToTensor(),
+            transforms.Normalize((args.mean_image,), (args.std_image,))])
+
     for epoch in range(start, end):
+
+        model.eval()
+        # #
+        descriptors = get_descriptors_for_dataset(model, trainPhotoTourDataset)
+        # #
+        np.save('descriptors.npy', descriptors)
+        descriptors = np.load('descriptors.npy')
+        #
+        hard_negatives = get_hard_negatives(trainPhotoTourDataset, descriptors)
+        np.save('descriptors_min_dist.npy', hard_negatives)
+        hard_negatives = np.load('descriptors_min_dist.npy')
+        print(hard_negatives[0])
+
+        trainPhotoTourDatasetWithHardNegatives = TripletPhotoTourHardNegatives(train=True,
+                                                              negative_indices=hard_negatives,
+                                                              batch_size=args.batch_size,
+                                                              root=args.dataroot,
+                                                              name=args.training_set,
+                                                              download=True,
+                                                              transform=transform)
+
+        train_loader = torch.utils.data.DataLoader(trainPhotoTourDatasetWithHardNegatives,
+                                                   batch_size=args.batch_size,
+                                                   shuffle=False, **kwargs)
+
+        train(train_loader, model, optimizer1, epoch, logger)
+
         # iterate over test loaders and test results
-        train(train_loader, model, optimizer1, epoch, logger, triplet_flag)
         for test_loader in test_loaders:
             test(test_loader['dataloader'], model, epoch, logger, test_loader['name'])
-        
+
         if TEST_ON_W1BS :
             # print(weights_path)
             patch_images = w1bs.get_list_of_patch_images(
                 DATASET_DIR=args.w1bsroot.replace('/code', '/data/W1BS'))
-            desc_name = 'curr_desc'# + str(random.randint(0,100))
-            
-            DESCS_DIR = LOG_DIR + '/temp_descs/' #args.w1bsroot.replace('/code', "/data/out_descriptors")
-            OUT_DIR = DESCS_DIR.replace('/temp_descs/', "/out_graphs/")
+            desc_name = 'curr_desc'
 
             for img_fname in patch_images:
                 w1bs_extract_descs_and_save(img_fname, model, desc_name, cuda = args.cuda,
                                             mean_img=args.mean_image,
-                                            std_img=args.std_image, out_dir = DESCS_DIR)
+                                            std_img=args.std_image)
 
+            DESCS_DIR = args.w1bsroot.replace('/code', "/data/out_descriptors")
+            OUT_DIR = args.w1bsroot.replace('/code', "/data/out_graphs")
 
             force_rewrite_list = [desc_name]
             w1bs.match_descriptors_and_save_results(DESC_DIR=DESCS_DIR, do_rewrite=True,
@@ -540,27 +604,114 @@ def main(train_loader, test_loaders, model, logger, file_logger):
                                          methods=["SNN_ratio"],
                                          descs_to_draw=[desc_name],
                                          logger=file_logger,
-                                         tensor_logger = logger)
+                                         tensor_logger = None)
             else:
                 w1bs.draw_and_save_plots(DESC_DIR=DESCS_DIR, OUT_DIR=OUT_DIR,
                                          methods=["SNN_ratio"],
                                          descs_to_draw=[desc_name],
                                          really_draw = False)
 
+
+class PhototourTrainingData(data.Dataset):
+
+    def __init__(self, data):
+        self.data_files = data
+
+    def __getitem__(self, item):
+        res = self.data_files[item]
+        return res
+
+    def __len__(self):
+        return len(self.data_files)
+
+def BuildKNNGraphByFAISS_GPU(db,k):
+    dbsize, dim = db.shape
+    flat_config = faiss.GpuIndexFlatConfig()
+    flat_config.device = 0
+    res = faiss.StandardGpuResources()
+    nn = faiss.GpuIndexFlatL2(res, dim, flat_config)
+    nn.add(db)
+    dists,idx = nn.search(db, k+1)
+    return idx[:,1:],dists[:,1:]
+
+def get_descriptors_for_dataset(model, trainPhotoTourDataset):
+
+    transformed = []
+
+    for img in trainPhotoTourDataset.data:
+        transformed.append(trainPhotoTourDataset.transform(img.numpy()))
+    print(len(transformed))
+    phototour_loader = data_utils.DataLoader(PhototourTrainingData(transformed), batch_size=128, shuffle=False)
+    descriptors = []
+    pbar = tqdm(enumerate(phototour_loader))
+    for batch_idx, data_a in pbar:
+
+        if args.cuda:
+            model.cuda()
+            data_a = data_a.cuda()
+
+        data_a = Variable(data_a, volatile=True),
+        out_a = model(data_a[0])
+        descriptors.extend(out_a.data.cpu().numpy())
+
+    return descriptors
+
+
+def remove_descriptors_with_same_index(min_dist_indices, indices, labels, descriptors):
+
+    res_min_dist_indices = []
+
+    for current_index in range(0, len(min_dist_indices)):
+        # get indices of the same 3d points
+        point3d_indices = labels[indices[current_index]]
+        indices_to_remove = []
+        for indx in min_dist_indices[current_index]:
+            # add to removal list indices of the same 3d point and same images in other 3d point
+            if(indx in point3d_indices or (descriptors[indx] == descriptors[current_index]).all()):
+                indices_to_remove.append(indx)
+
+        curr_desc = [x for x in min_dist_indices[current_index] if x not in indices_to_remove]
+        res_min_dist_indices.append(curr_desc)
+
+
+    return res_min_dist_indices
+
+def get_hard_negatives(trainPhotoTourDataset, descriptors):
+
+    def create_indices(_labels):
+        inds = dict()
+        for idx, ind in enumerate(_labels):
+            if ind not in inds:
+                inds[ind] = []
+            inds[ind].append(idx)
+        return inds
+
+    labels = create_indices(trainPhotoTourDataset.labels)
+    indices = {}
+    for key, value in labels.iteritems():
+        for ind in value:
+            indices[ind] = key
+
+    print('getting closest indices .... ')
+    descriptors_min_dist, inidices = BuildKNNGraphByFAISS_GPU(descriptors, 12)
+
+    print('removing descriptors with same indices .... ')
+    descriptors_min_dist = remove_descriptors_with_same_index(descriptors_min_dist, indices, labels, descriptors)
+
+    return descriptors_min_dist
+
 if __name__ == '__main__':
-    LOG_DIR = args.log_dir
-    if not os.path.isdir(LOG_DIR):
-        os.makedirs(LOG_DIR)
-    LOG_DIR = args.log_dir + suffix
-    DESCS_DIR = LOG_DIR + 'temp_descs'
-    if TEST_ON_W1BS:
-        if not os.path.isdir(DESCS_DIR):
-            os.makedirs(DESCS_DIR)
-    logger, file_logger = None, None
-    model = HardNet()
-    if(args.enable_logging):
-        from Loggers import Logger, FileLogger
-        logger = Logger(LOG_DIR)
-        #file_logger = FileLogger(./log/+suffix)
-    train_loader, test_loaders = create_loaders(load_random_triplets = triplet_flag)
-    main(train_loader, test_loaders, model, logger, file_logger)
+
+            LOG_DIR = args.log_dir + args.experiment_name
+            logger, file_logger = None, None
+            model = TNet()
+
+            if(args.enable_logging):
+                #logger = Logger(LOG_DIR)
+                file_logger = FileLogger(LOG_DIR)
+
+            test_dataset_names = copy.copy(dataset_names)
+            test_dataset_names.remove(args.training_set)
+
+            trainPhotoTourDataset, test_loaders = create_loaders()
+            main(trainPhotoTourDataset, test_loaders, model, logger, file_logger)
