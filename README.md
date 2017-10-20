@@ -51,13 +51,15 @@ Result will be stored in ../ubc_log/
 **Distribution of the cosine distance of matching pairs and non-matching pairs in test set 
 (iteration is aligned to the roc curve)**
 
-**Triplet:**
+**Triplet:**   
 
-<img src="./fig/baseline.gif" width="300"> 
+<img src="./fig/baseline.gif" width="300">  
 
 **Triplet + GOR:**
 
 <img src="./fig/ours.gif" width="300">
+
+We can see that with the proposed regularization, the distribution of the non-matching pairs has small variance which leads to better result. 
 
 
 ## Citation
