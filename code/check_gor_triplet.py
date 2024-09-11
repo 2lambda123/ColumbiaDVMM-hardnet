@@ -8,15 +8,16 @@ Email: xu.zhang@columbia.edu.cn
 
 #! /usr/bin/env python2
 
-import numpy as np
-import scipy.io as sio
-import time
-import os
-import sys
-import pandas as pd
-import subprocess
-import shlex
 import argparse
+import os
+import shlex
+import subprocess
+import sys
+import time
+
+import numpy as np
+import pandas as pd
+import scipy.io as sio
 
 
 def usage():

@@ -14,38 +14,33 @@ If you use this code, please cite
 """
 
 from __future__ import division, print_function
+
+import argparse
+import copy
+import os
+import random
 import sys
 from copy import deepcopy
-import argparse
+
+import cv2
+import matplotlib as mpl
+import numpy as np
+import scipy.io as sio
 import torch
-import torch.nn.init
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
+import torch.nn.functional as F
+import torch.nn.init
 import torch.optim as optim
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
-from torch.autograd import Variable
-import torch.backends.cudnn as cudnn
-import os
-from tqdm import tqdm
-import numpy as np
-import random
-import cv2
-import copy
 from EvalMetrics import ErrorRateAt95Recall
-from Losses import (
-    loss_HardNet,
-    loss_random_sampling,
-    loss_L2Net,
-    global_orthogonal_regularization,
-)
+from Losses import (global_orthogonal_regularization, loss_HardNet, loss_L2Net,
+                    loss_random_sampling)
+from torch.autograd import Variable
+from tqdm import tqdm
+from Utils import L2Norm, cv2_scale, np_reshape, str2bool
 from W1BS import w1bs_extract_descs_and_save
-from Utils import L2Norm, cv2_scale, np_reshape
-from Utils import str2bool
-import torch.nn as nn
-import torch.nn.functional as F
-
-import scipy.io as sio
-import matplotlib as mpl
 
 if os.environ.get("DISPLAY", "") == "":
     print("no display found. Using non-interactive Agg backend")
@@ -839,7 +834,7 @@ if __name__ == "__main__":
     logger, file_logger = None, None
     model = HardNet()
     if args.enable_logging:
-        from Loggers import Logger, FileLogger
+        from Loggers import FileLogger, Logger
 
         logger = Logger(LOG_DIR)
         # file_logger = FileLogger(./log/+suffix)

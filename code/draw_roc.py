@@ -1,10 +1,11 @@
+import math
+import operator
+import os
+import pickle
+
+import matplotlib as mpl
 import numpy as np
 import scipy.io as sio
-import pickle
-import operator
-import math
-import matplotlib as mpl
-import os
 
 if os.environ.get("DISPLAY", "") == "":
     print("no display found. Using non-interactive Agg backend")
