@@ -29,7 +29,6 @@ import torch.backends.cudnn as cudnn
 import os
 from tqdm import tqdm
 import numpy as np
-import random
 import cv2
 import copy
 from EvalMetrics import ErrorRateAt95Recall
@@ -41,6 +40,7 @@ import torch.utils.data as data
 import torch.utils.data as data_utils
 import torch.nn.functional as F
 from Losses import loss_HardNet, loss_random_sampling, loss_L2Net
+import secrets
 
 sys.path.insert(0, '/home/dagnyt/faiss/faiss/')
 import faiss
@@ -319,7 +319,7 @@ class TripletPhotoTourHardNegatives(dset.PhotoTour):
             indx = indices[c1][n1]
             if(len(negative_indices[indx])>0):
 
-                negative_indx = random.choice(negative_indices[indx])
+                negative_indx = secrets.choice(negative_indices[indx])
                 negative_indices[indx].remove(negative_indx)
 
                 if(indx in negative_indices[negative_indx]):
