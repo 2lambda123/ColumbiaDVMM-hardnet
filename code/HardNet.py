@@ -5,12 +5,12 @@ This is HardNet local patch descriptor. The training code is based on PyTorch TF
 https://github.com/edgarriba/examples/tree/master/triplet
 by Edgar Riba.
 
-If you use this code, please cite 
+If you use this code, please cite
 @article{HardNet2017,
  author = {Anastasiya Mishchuk, Dmytro Mishkin, Filip Radenovic, Jiri Matas},
     title = "{Working hard to know your neighbor's margins:Local descriptor learning loss}",
      year = 2017}
-(c) 2017 by Anastasiia Mishchuk, Dmytro Mishkin 
+(c) 2017 by Anastasiia Mishchuk, Dmytro Mishkin
 """
 from __future__ import division
 from __future__ import print_function
@@ -61,7 +61,7 @@ class CorrelationPenaltyLoss(nn.Module):
     def forward(self, input):
         """
 
-        :param input: 
+        :param input:
 
         """
         mean1 = torch.mean(input, dim=0)
@@ -310,14 +310,14 @@ class TripletPhotoTour(dset.PhotoTour):
     def generate_triplets(labels, num_triplets):
         """
 
-        :param labels: 
-        :param num_triplets: 
+        :param labels:
+        :param num_triplets:
 
         """
         def create_indices(_labels):
             """
 
-            :param _labels: 
+            :param _labels:
 
             """
             inds = dict()
@@ -359,7 +359,7 @@ class TripletPhotoTour(dset.PhotoTour):
         def transform_img(img):
             """
 
-            :param img: 
+            :param img:
 
             """
             if self.transform is not None:
@@ -440,7 +440,7 @@ class HardNet(nn.Module):
     def input_norm(self, x):
         """
 
-        :param x: 
+        :param x:
 
         """
         flat = x.view(x.size(0), -1)
@@ -453,7 +453,7 @@ class HardNet(nn.Module):
     def forward(self, input):
         """
 
-        :param input: 
+        :param input:
 
         """
         x_features = self.features(self.input_norm(input))
@@ -464,7 +464,7 @@ class HardNet(nn.Module):
 def weights_init(m):
     """
 
-    :param m: 
+    :param m:
 
     """
     if isinstance(m, nn.Conv2d):
@@ -544,12 +544,12 @@ def train(
 ):
     """
 
-    :param train_loader: 
-    :param test_loaders: 
-    :param model: 
-    :param optimizer: 
-    :param epoch: 
-    :param logger: 
+    :param train_loader:
+    :param test_loaders:
+    :param model:
+    :param optimizer:
+    :param epoch:
+    :param logger:
     :param load_triplets:  (Default value = False)
 
     """
@@ -653,12 +653,12 @@ def train(
 def test(test_loader, model, epoch, iteration, logger, logger_test_name):
     """
 
-    :param test_loader: 
-    :param model: 
-    :param epoch: 
-    :param iteration: 
-    :param logger: 
-    :param logger_test_name: 
+    :param test_loader:
+    :param model:
+    :param epoch:
+    :param iteration:
+    :param logger:
+    :param logger_test_name:
 
     """
     # switch to evaluate mode
@@ -778,7 +778,7 @@ def adjust_learning_rate(optimizer):
     """Updates the learning rate given the learning rate decay.
     The routine has been implemented according to the original Lua SGD optimizer
 
-    :param optimizer: 
+    :param optimizer:
 
     """
     for group in optimizer.param_groups:
@@ -798,8 +798,8 @@ def adjust_learning_rate(optimizer):
 def create_optimizer(model, new_lr):
     """
 
-    :param model: 
-    :param new_lr: 
+    :param model:
+    :param new_lr:
 
     """
     # setup optimizer
@@ -821,11 +821,11 @@ def create_optimizer(model, new_lr):
 def main(train_loader, test_loaders, model, logger, file_logger):
     """
 
-    :param train_loader: 
-    :param test_loaders: 
-    :param model: 
-    :param logger: 
-    :param file_logger: 
+    :param train_loader:
+    :param test_loaders:
+    :param model:
+    :param logger:
+    :param file_logger:
 
     """
     # print the experiment configuration

@@ -17,9 +17,9 @@ import plotly.plotly as py
 def ROC_Curve(labels, scores, fpr_point):
     """
 
-    :param labels: 
-    :param scores: 
-    :param fpr_point: 
+    :param labels:
+    :param scores:
+    :param fpr_point:
 
     """
     recall_point = []
