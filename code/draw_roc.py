@@ -6,9 +6,9 @@ import math
 import matplotlib as mpl
 import os
 
-if os.environ.get('DISPLAY', '') == '':
-    print('no display found. Using non-interactive Agg backend')
-    mpl.use('Agg')
+if os.environ.get("DISPLAY", "") == "":
+    print("no display found. Using non-interactive Agg backend")
+    mpl.use("Agg")
 import matplotlib.pyplot as plt
 import plotly.plotly as py
 
@@ -34,34 +34,34 @@ def ROC_Curve(labels, scores, fpr_point):
         fpr = float(count - tp) / all_N
 
         if fpr >= fpr_point[index]:
-            recall_point.append((float(tp)/n_match))
-            index = index+1
+            recall_point.append((float(tp) / n_match))
+            index = index + 1
             if index >= fpr_point.shape[0]:
                 break
     return recall_point
 
 
 if __name__ == "__main__":
-    setting = 'notredame_yosemite_notredame_random_global'
-    method_list = [setting+'_as', setting+'_gor_alpha1.0_as']
-    method_label = ['Triplet', 'Triplet+GOR(Ours)']
+    setting = "notredame_yosemite_notredame_random_global"
+    method_list = [setting + "_as", setting + "_gor_alpha1.0_as"]
+    method_label = ["Triplet", "Triplet+GOR(Ours)"]
     recall_list = []
-    distance_dir = '../distance_mat/'
-    file_list = os.listdir(distance_dir+method_list[0])
+    distance_dir = "../distance_mat/"
+    file_list = os.listdir(distance_dir + method_list[0])
     fig = plt.figure()
     for file_t in file_list:
-        if file_t.endswith('.mat'):
+        if file_t.endswith(".mat"):
             # print(file_t)
             # file_t = 'epoch_01_iter_1000.mat'
             recall_list = []
             epoch = int(file_t[6:8])
             iter_num = int(file_t[14:18])
             for method in method_list:
-                file_name = distance_dir + method + '/' + file_t
+                file_name = distance_dir + method + "/" + file_t
                 # file_name = '../data/photoTour/result/dis_mat_{}/{}_{}_step_10.mat'.format(k,training_name,test_name)
                 # file_name = './epoch_00_iter_0000.mat'.format(k,training_name,test_name)
                 mat = sio.loadmat(file_name)
-                mat = mat['save_object']
+                mat = mat["save_object"]
                 dists = mat[0][0][0]
                 labels = mat[0][1][0]
                 # print(dists)
@@ -74,36 +74,37 @@ if __name__ == "__main__":
             BIGGER_SIZE = 24
 
             # controls default text sizes
-            plt.rc('font', size=SMALL_SIZE)
+            plt.rc("font", size=SMALL_SIZE)
             # fontsize of the axes title
-            plt.rc('axes', titlesize=MEDIUM_SIZE)
+            plt.rc("axes", titlesize=MEDIUM_SIZE)
             # fontsize of the x and y labels
-            plt.rc('axes', labelsize=MEDIUM_SIZE)
+            plt.rc("axes", labelsize=MEDIUM_SIZE)
             # fontsize of the tick labels
-            plt.rc('xtick', labelsize=SMALL_SIZE)
+            plt.rc("xtick", labelsize=SMALL_SIZE)
             # fontsize of the tick labels
-            plt.rc('ytick', labelsize=SMALL_SIZE)
-            plt.rc('legend', fontsize=BIGGER_SIZE)    # legend fontsize
+            plt.rc("ytick", labelsize=SMALL_SIZE)
+            plt.rc("legend", fontsize=BIGGER_SIZE)  # legend fontsize
             # fontsize of the figure title
-            plt.rc('figure', titlesize=BIGGER_SIZE)
+            plt.rc("figure", titlesize=BIGGER_SIZE)
 
-            plt.plot(fpr_point, recall_list[0],
-                     'b', fpr_point, recall_list[1], 'r')
-            plt.suptitle('Epoch: {:02d} Iter: {:04d}'.format(
-                epoch, iter_num), fontsize=24)
+            plt.plot(fpr_point, recall_list[0], "b", fpr_point, recall_list[1], "r")
+            plt.suptitle(
+                "Epoch: {:02d} Iter: {:04d}".format(epoch, iter_num), fontsize=24
+            )
             plt.ylim([0.0, 1.0])
             plt.xlim([0, 0.5])
-            plt.xlabel('FPR(%)')
-            plt.ylabel('TPR(%)')
+            plt.xlabel("FPR(%)")
+            plt.ylabel("TPR(%)")
             plt.legend(method_label)
-            plt.legend(loc='bottom right')
+            plt.legend(loc="bottom right")
             try:
-                os.stat('../roc/'+setting)
+                os.stat("../roc/" + setting)
             except:
-                os.makedirs('../roc/'+setting)
+                os.makedirs("../roc/" + setting)
 
-            plt.savefig('../roc/'+setting+'/' +
-                        file_t[0:-4]+'.png', bbox_inches='tight')
+            plt.savefig(
+                "../roc/" + setting + "/" + file_t[0:-4] + ".png", bbox_inches="tight"
+            )
             plt.clf()
             # break
             # plt.show()
