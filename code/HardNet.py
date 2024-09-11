@@ -28,7 +28,6 @@ import torch.backends.cudnn as cudnn
 import os
 from tqdm import tqdm
 import numpy as np
-import random
 import cv2
 import copy
 from EvalMetrics import ErrorRateAt95Recall
@@ -41,6 +40,8 @@ import torch.nn.functional as F
 
 import scipy.io as sio
 import matplotlib as mpl
+import secrets
+
 if os.environ.get('DISPLAY','') == '':
     print('no display found. Using non-interactive Agg backend')
     mpl.use('Agg')
@@ -258,8 +259,8 @@ class TripletPhotoTour(dset.PhotoTour):
             img_n = transform_img(n)
         # transform images if required
         if args.fliprot:
-            do_flip = random.random() > 0.5
-            do_rot = random.random() > 0.5
+            do_flip = secrets.SystemRandom().random() > 0.5
+            do_rot = secrets.SystemRandom().random() > 0.5
             if do_rot:
                 img_a = img_a.permute(0,2,1)
                 img_p = img_p.permute(0,2,1)
