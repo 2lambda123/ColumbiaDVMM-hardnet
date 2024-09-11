@@ -20,11 +20,13 @@ import argparse
 
 
 def usage():
-    print >> sys.stderr 
+    print >> sys.stderr
     sys.exit(1)
+
 
 class cd:
     """Context manager for changing the current working directory"""
+
     def __init__(self, newPath):
         self.newPath = os.path.expanduser(newPath)
 
@@ -35,8 +37,9 @@ class cd:
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
 
-gpu_set = ['0','1']
-parameter_set = ['False','True']
+
+gpu_set = ['0', '1']
+parameter_set = ['False', 'True']
 number_gpu = len(gpu_set)
 
 datasets = ['notredame']
@@ -47,21 +50,20 @@ for dataset in datasets:
     for idx, parameter in enumerate(parameter_set):
         print('Test Parameter: {}'.format(parameter))
         command = 'python HardNet.py --training-set {} --fliprot=False --n-triplets=1000000 --batch-size=128 --epochs 3 --gor={} --w1bsroot=None --gpu-id {} --log-dir ../ubc_triplet_log/  --enable-logging=True --batch-reduce=random_global --model-dir ../ubc_model/ --margin=0.5 --log-interval=1000'\
-                .format(dataset, parameter, gpu_set[idx%number_gpu])
-    
+            .format(dataset, parameter, gpu_set[idx % number_gpu])
+
         print(command)
         p = subprocess.Popen(shlex.split(command))
         process_set.append(p)
-        
-        if (idx+1)%number_gpu == 0:
+
+        if (idx+1) % number_gpu == 0:
             print('Wait for process end')
             for sub_process in process_set:
                 sub_process.wait()
-        
+
             process_set = []
-    
+
         time.sleep(60)
-    
+
     for sub_process in process_set:
         sub_process.wait()
-
