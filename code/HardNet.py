@@ -12,8 +12,8 @@ If you use this code, please cite
      year = 2017}
 (c) 2017 by Anastasiia Mishchuk, Dmytro Mishkin 
 """
-
-from __future__ import division, print_function
+from __future__ import division
+from __future__ import print_function
 
 import argparse
 import copy
@@ -26,7 +26,6 @@ import cv2
 import matplotlib as mpl
 import numpy as np
 import scipy.io as sio
-import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as F
@@ -35,11 +34,16 @@ import torch.optim as optim
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
 from EvalMetrics import ErrorRateAt95Recall
-from Losses import (global_orthogonal_regularization, loss_HardNet, loss_L2Net,
-                    loss_random_sampling)
+from Losses import global_orthogonal_regularization
+from Losses import loss_HardNet
+from Losses import loss_L2Net
+from Losses import loss_random_sampling
 from torch.autograd import Variable
 from tqdm import tqdm
-from Utils import L2Norm, cv2_scale, np_reshape, str2bool
+from Utils import cv2_scale
+from Utils import L2Norm
+from Utils import np_reshape
+from Utils import str2bool
 from W1BS import w1bs_extract_descs_and_save
 
 if os.environ.get("DISPLAY", "") == "":

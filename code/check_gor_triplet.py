@@ -5,9 +5,7 @@ Usage: check_gor_triplet.py
 Author: Xu Zhang
 Email: xu.zhang@columbia.edu.cn
 """
-
 #! /usr/bin/env python2
-
 import argparse
 import os
 import shlex
