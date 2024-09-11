@@ -55,6 +55,7 @@ import plotly.plotly as py
 
 class CorrelationPenaltyLoss(nn.Module):
     """ """
+
     def __init__(self):
         super(CorrelationPenaltyLoss, self).__init__()
 
@@ -66,9 +67,8 @@ class CorrelationPenaltyLoss(nn.Module):
         """
         mean1 = torch.mean(input, dim=0)
         zeroed = input - mean1.expand_as(input)
-        cor_mat = torch.bmm(torch.t(zeroed).unsqueeze(0), zeroed.unsqueeze(0)).squeeze(
-            0
-        )
+        cor_mat = torch.bmm(torch.t(zeroed).unsqueeze(0),
+                            zeroed.unsqueeze(0)).squeeze(0)
         d = torch.diag(torch.diag(cor_mat))
         no_diag = cor_mat - d
         d_sq = no_diag * no_diag
@@ -85,36 +85,46 @@ parser.add_argument(
     default="../wxbs-descriptors-benchmark/code",
     help="path to dataset",
 )
-parser.add_argument(
-    "--dataroot", type=str, default="../datasets/", help="path to dataset"
-)
-parser.add_argument(
-    "--enable-logging", type=bool, default=False, help="output to tensorlogger"
-)
-parser.add_argument("--log-dir", default="../logs", help="folder to output log")
-parser.add_argument(
-    "--model-dir", default="../models", help="folder to output model checkpoints"
-)
-parser.add_argument(
-    "--experiment-name", default="/liberty_train/", help="experiment path"
-)
-parser.add_argument(
-    "--training-set", default="liberty", help="Other options: notredame, yosemite"
-)
-parser.add_argument(
-    "--loss", default="triplet_margin", help="Other options: softmax, contrastive"
-)
+parser.add_argument("--dataroot",
+                    type=str,
+                    default="../datasets/",
+                    help="path to dataset")
+parser.add_argument("--enable-logging",
+                    type=bool,
+                    default=False,
+                    help="output to tensorlogger")
+parser.add_argument("--log-dir",
+                    default="../logs",
+                    help="folder to output log")
+parser.add_argument("--model-dir",
+                    default="../models",
+                    help="folder to output model checkpoints")
+parser.add_argument("--experiment-name",
+                    default="/liberty_train/",
+                    help="experiment path")
+parser.add_argument("--training-set",
+                    default="liberty",
+                    help="Other options: notredame, yosemite")
+parser.add_argument("--loss",
+                    default="triplet_margin",
+                    help="Other options: softmax, contrastive")
 parser.add_argument(
     "--batch-reduce",
     default="min",
     help="Other options: average, random, random_global, L2Net",
 )
-parser.add_argument("--num-workers", default=1, help="Number of workers to be created")
+parser.add_argument("--num-workers",
+                    default=1,
+                    help="Number of workers to be created")
 parser.add_argument("--pin-memory", type=bool, default=True, help="")
-parser.add_argument(
-    "--decor", type=str2bool, default=False, help="L2Net decorrelation penalty"
-)
-parser.add_argument("--anchorave", type=str2bool, default=False, help="anchorave")
+parser.add_argument("--decor",
+                    type=str2bool,
+                    default=False,
+                    help="L2Net decorrelation penalty")
+parser.add_argument("--anchorave",
+                    type=str2bool,
+                    default=False,
+                    help="anchorave")
 parser.add_argument(
     "--imageSize",
     type=int,
@@ -154,9 +164,10 @@ parser.add_argument(
     metavar="E",
     help="number of epochs to train (default: 10)",
 )
-parser.add_argument(
-    "--anchorswap", type=bool, default=True, help="turns on anchor swap"
-)
+parser.add_argument("--anchorswap",
+                    type=bool,
+                    default=True,
+                    help="turns on anchor swap")
 parser.add_argument(
     "--batch-size",
     type=int,
@@ -186,15 +197,20 @@ parser.add_argument(
     help="the margin value for the triplet loss function (default: 1.0",
 )
 parser.add_argument("--gor", type=str2bool, default=False, help="use gor")
-parser.add_argument(
-    "--alpha", type=float, default=1.0, metavar="ALPHA", help="gor parameter"
-)
-parser.add_argument(
-    "--act-decay", type=float, default=0, help="activity L2 decay, default 0"
-)
-parser.add_argument(
-    "--lr", type=float, default=0.1, metavar="LR", help="learning rate (default: 0.1)"
-)
+parser.add_argument("--alpha",
+                    type=float,
+                    default=1.0,
+                    metavar="ALPHA",
+                    help="gor parameter")
+parser.add_argument("--act-decay",
+                    type=float,
+                    default=0,
+                    help="activity L2 decay, default 0")
+parser.add_argument("--lr",
+                    type=float,
+                    default=0.1,
+                    metavar="LR",
+                    help="learning rate (default: 0.1)")
 parser.add_argument(
     "--fliprot",
     type=str2bool,
@@ -208,9 +224,11 @@ parser.add_argument(
     metavar="LRD",
     help="learning rate decay ratio (default: 1e-6",
 )
-parser.add_argument(
-    "--wd", default=1e-4, type=float, metavar="W", help="weight decay (default: 1e-4)"
-)
+parser.add_argument("--wd",
+                    default=1e-4,
+                    type=float,
+                    metavar="W",
+                    help="weight decay (default: 1e-4)")
 parser.add_argument(
     "--optimizer",
     default="sgd",
@@ -219,15 +237,19 @@ parser.add_argument(
     help="The optimizer to use (default: SGD)",
 )
 # Device options
-parser.add_argument(
-    "--no-cuda", action="store_true", default=False, help="enables CUDA training"
-)
-parser.add_argument(
-    "--gpu-id", default="0", type=str, help="id(s) for CUDA_VISIBLE_DEVICES"
-)
-parser.add_argument(
-    "--seed", type=int, default=0, metavar="S", help="random seed (default: 0)"
-)
+parser.add_argument("--no-cuda",
+                    action="store_true",
+                    default=False,
+                    help="enables CUDA training")
+parser.add_argument("--gpu-id",
+                    default="0",
+                    type=str,
+                    help="id(s) for CUDA_VISIBLE_DEVICES")
+parser.add_argument("--seed",
+                    type=int,
+                    default=0,
+                    metavar="S",
+                    help="random seed (default: 0)")
 parser.add_argument(
     "--log-interval",
     type=int,
@@ -286,15 +308,13 @@ class TripletPhotoTour(dset.PhotoTour):
 
     """
 
-    def __init__(
-        self,
-        train=True,
-        transform=None,
-        batch_size=None,
-        load_random_triplets=False,
-        *arg,
-        **kw
-    ):
+    def __init__(self,
+                 train=True,
+                 transform=None,
+                 batch_size=None,
+                 load_random_triplets=False,
+                 *arg,
+                 **kw):
         super(TripletPhotoTour, self).__init__(*arg, **kw)
         self.transform = transform
         self.out_triplets = load_random_triplets
@@ -304,7 +324,8 @@ class TripletPhotoTour(dset.PhotoTour):
 
         if self.train:
             print("Generating {} triplets".format(self.n_triplets))
-            self.triplets = self.generate_triplets(self.labels, self.n_triplets)
+            self.triplets = self.generate_triplets(self.labels,
+                                                   self.n_triplets)
 
     @staticmethod
     def generate_triplets(labels, num_triplets):
@@ -314,6 +335,7 @@ class TripletPhotoTour(dset.PhotoTour):
         :param num_triplets:
 
         """
+
         def create_indices(_labels):
             """
 
@@ -352,10 +374,12 @@ class TripletPhotoTour(dset.PhotoTour):
                 while n1 == n2:
                     n2 = np.random.randint(0, len(indices[c1]) - 1)
             n3 = np.random.randint(0, len(indices[c2]) - 1)
-            triplets.append([indices[c1][n1], indices[c1][n2], indices[c2][n3]])
+            triplets.append(
+                [indices[c1][n1], indices[c1][n2], indices[c2][n3]])
         return torch.LongTensor(np.array(triplets))
 
     def __getitem__(self, index):
+
         def transform_img(img):
             """
 
@@ -393,7 +417,8 @@ class TripletPhotoTour(dset.PhotoTour):
                 img_a = torch.from_numpy(deepcopy(img_a.numpy()[:, :, ::-1]))
                 img_p = torch.from_numpy(deepcopy(img_p.numpy()[:, :, ::-1]))
                 if self.out_triplets:
-                    img_n = torch.from_numpy(deepcopy(img_n.numpy()[:, :, ::-1]))
+                    img_n = torch.from_numpy(
+                        deepcopy(img_n.numpy()[:, :, ::-1]))
         if self.out_triplets:
             return (img_a, img_p, img_n)
         else:
@@ -446,9 +471,8 @@ class HardNet(nn.Module):
         flat = x.view(x.size(0), -1)
         mp = torch.sum(flat, dim=1) / (32.0 * 32.0)
         sp = torch.std(flat, dim=1) + 1e-7
-        return (
-            x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)
-        ) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
+        return (x - mp.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1).expand_as(x)
+                ) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
 
     def forward(self, input):
         """
@@ -486,62 +510,58 @@ def create_loaders(load_random_triplets=False):
     test_dataset_names = copy.copy(dataset_names)
     test_dataset_names.remove(args.training_set)
 
-    kwargs = (
-        {"num_workers": args.num_workers, "pin_memory": args.pin_memory}
-        if args.cuda
-        else {}
-    )
+    kwargs = ({
+        "num_workers": args.num_workers,
+        "pin_memory": args.pin_memory
+    } if args.cuda else {})
 
-    transform = transforms.Compose(
-        [
-            transforms.Lambda(cv2_scale),
-            transforms.Lambda(np_reshape),
-            transforms.ToTensor(),
-            transforms.Normalize((args.mean_image,), (args.std_image,)),
-        ]
-    )
+    transform = transforms.Compose([
+        transforms.Lambda(cv2_scale),
+        transforms.Lambda(np_reshape),
+        transforms.ToTensor(),
+        transforms.Normalize((args.mean_image, ), (args.std_image, )),
+    ])
 
-    train_loader = torch.utils.data.DataLoader(
-        TripletPhotoTour(
-            train=True,
-            load_random_triplets=load_random_triplets,
-            batch_size=args.batch_size,
+    train_loader = torch.utils.data.DataLoader(TripletPhotoTour(
+        train=True,
+        load_random_triplets=load_random_triplets,
+        batch_size=args.batch_size,
+        root=args.dataroot,
+        name=args.training_set,
+        download=True,
+        transform=transform,
+    ),
+                                               batch_size=args.batch_size,
+                                               shuffle=False,
+                                               **kwargs)
+
+    test_loaders = [{
+        "name":
+        name,
+        "dataloader":
+        torch.utils.data.DataLoader(TripletPhotoTour(
+            train=False,
+            batch_size=args.test_batch_size,
             root=args.dataroot,
-            name=args.training_set,
+            name=name,
             download=True,
             transform=transform,
         ),
-        batch_size=args.batch_size,
-        shuffle=False,
-        **kwargs
-    )
-
-    test_loaders = [
-        {
-            "name": name,
-            "dataloader": torch.utils.data.DataLoader(
-                TripletPhotoTour(
-                    train=False,
-                    batch_size=args.test_batch_size,
-                    root=args.dataroot,
-                    name=name,
-                    download=True,
-                    transform=transform,
-                ),
-                batch_size=args.test_batch_size,
-                shuffle=False,
-                **kwargs
-            ),
-        }
-        for name in test_dataset_names
-    ]
+                                    batch_size=args.test_batch_size,
+                                    shuffle=False,
+                                    **kwargs),
+    } for name in test_dataset_names]
 
     return train_loader, test_loaders
 
 
-def train(
-    train_loader, test_loaders, model, optimizer, epoch, logger, load_triplets=False
-):
+def train(train_loader,
+          test_loaders,
+          model,
+          optimizer,
+          epoch,
+          logger,
+          load_triplets=False):
     """
 
     :param train_loader:
@@ -645,7 +665,10 @@ def train(
         os.makedirs("{}{}".format(args.model_dir, suffix))
 
     torch.save(
-        {"epoch": epoch + 1, "state_dict": model.state_dict()},
+        {
+            "epoch": epoch + 1,
+            "state_dict": model.state_dict()
+        },
         "{}{}/checkpoint_{}.pth".format(args.model_dir, suffix, epoch),
     )
 
@@ -679,7 +702,7 @@ def test(test_loader, model, epoch, iteration, logger, logger_test_name):
 
         out_a, out_p = model(data_a), model(data_p)
         # euclidean distance
-        dists = torch.sqrt(torch.sum((out_a - out_p) ** 2, 1))
+        dists = torch.sqrt(torch.sum((out_a - out_p)**2, 1))
         distances.append(dists.data.cpu().numpy().reshape(-1, 1))
         ll = label.data.cpu().numpy().reshape(-1, 1)
         labels.append(ll)
@@ -692,17 +715,11 @@ def test(test_loader, model, epoch, iteration, logger, logger_test_name):
     print("\33[91mTest set: Accuracy(FPR95): {:.8f}\n\33[0m".format(fpr95))
 
     try:
-        os.stat(
-            "../histogram_map/{}_{}_{}/".format(
-                args.training_set, logger_test_name, suffix
-            )
-        )
+        os.stat("../histogram_map/{}_{}_{}/".format(args.training_set,
+                                                    logger_test_name, suffix))
     except:
-        os.makedirs(
-            "../histogram_map/{}_{}_{}/".format(
-                args.training_set, logger_test_name, suffix
-            )
-        )
+        os.makedirs("../histogram_map/{}_{}_{}/".format(
+            args.training_set, logger_test_name, suffix))
 
     SMALL_SIZE = 14
     MEDIUM_SIZE = 20
@@ -740,32 +757,25 @@ def test(test_loader, model, epoch, iteration, logger, logger_test_name):
     plt.ylabel("#Pairs")
     plt.savefig(
         "../histogram_map/{}_{}_{}/epoch_{:02d}_iter_{:04d}.png".format(
-            args.training_set, logger_test_name, suffix, epoch, iteration
-        ),
+            args.training_set, logger_test_name, suffix, epoch, iteration),
         bbox_inches="tight",
     )
     plt.clf()
 
     try:
-        os.stat(
-            "../distance_mat/{}_{}_{}".format(
-                args.training_set, logger_test_name, suffix
-            )
-        )
+        os.stat("../distance_mat/{}_{}_{}".format(args.training_set,
+                                                  logger_test_name, suffix))
     except:
-        os.makedirs(
-            "../distance_mat/{}_{}_{}".format(
-                args.training_set, logger_test_name, suffix
-            )
-        )
+        os.makedirs("../distance_mat/{}_{}_{}".format(args.training_set,
+                                                      logger_test_name,
+                                                      suffix))
 
-    save_object = np.zeros((2,), dtype=np.object)
+    save_object = np.zeros((2, ), dtype=np.object)
     save_object[0] = distances
     save_object[1] = labels
     sio.savemat(
         "../distance_mat/{}_{}_{}/epoch_{:02d}_iter_{:04d}.mat".format(
-            args.training_set, logger_test_name, suffix, epoch, iteration
-        ),
+            args.training_set, logger_test_name, suffix, epoch, iteration),
         {"save_object": save_object},
     )
 
@@ -787,11 +797,8 @@ def adjust_learning_rate(optimizer):
         else:
             group["step"] += 1.0
         group["lr"] = args.lr * (
-            1.0
-            - float(group["step"])
-            * float(args.batch_size)
-            / (args.n_triplets * float(args.epochs))
-        )
+            1.0 - float(group["step"]) * float(args.batch_size) /
+            (args.n_triplets * float(args.epochs)))
     return
 
 
@@ -812,7 +819,9 @@ def create_optimizer(model, new_lr):
             weight_decay=args.wd,
         )
     elif args.optimizer == "adam":
-        optimizer = optim.Adam(model.parameters(), lr=new_lr, weight_decay=args.wd)
+        optimizer = optim.Adam(model.parameters(),
+                               lr=new_lr,
+                               weight_decay=args.wd)
     else:
         raise Exception("Not supported optimizer: {0}".format(args.optimizer))
     return optimizer
@@ -854,17 +863,15 @@ def main(train_loader, test_loaders, model, logger, file_logger):
     end = start + args.epochs
     for epoch in range(start, end):
         # iterate over test loaders and test results
-        train(
-            train_loader, test_loaders, model, optimizer1, epoch, logger, triplet_flag
-        )
+        train(train_loader, test_loaders, model, optimizer1, epoch, logger,
+              triplet_flag)
         # for test_loader in test_loaders:
         #    test(test_loader['dataloader'], model, epoch, logger, test_loader['name'])
 
         if TEST_ON_W1BS:
             # print(weights_path)
             patch_images = w1bs.get_list_of_patch_images(
-                DATASET_DIR=args.w1bsroot.replace("/code", "/data/W1BS")
-            )
+                DATASET_DIR=args.w1bsroot.replace("/code", "/data/W1BS"))
             desc_name = "curr_desc"  # + str(random.randint(0,100))
 
             # args.w1bsroot.replace('/code', "/data/out_descriptors")
@@ -925,5 +932,6 @@ if __name__ == "__main__":
         logger = Logger(LOG_DIR)
         # file_logger = FileLogger(./log/+suffix)
 
-    train_loader, test_loaders = create_loaders(load_random_triplets=triplet_flag)
+    train_loader, test_loaders = create_loaders(
+        load_random_triplets=triplet_flag)
     main(train_loader, test_loaders, model, logger, file_logger)

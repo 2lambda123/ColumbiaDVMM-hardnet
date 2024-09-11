@@ -45,13 +45,11 @@ number_gpu = len(gpu_set)
 datasets = ["notredame"]
 process_set = []
 
-
 for dataset in datasets:
     for idx, parameter in enumerate(parameter_set):
         print("Test Parameter: {}".format(parameter))
         command = "python HardNet.py --training-set {} --fliprot=False --n-triplets=1000000 --batch-size=128 --epochs 3 --gor={} --w1bsroot=None --gpu-id {} --log-dir ../ubc_triplet_log/  --enable-logging=True --batch-reduce=random_global --model-dir ../ubc_model/ --margin=0.5 --log-interval=1000".format(
-            dataset, parameter, gpu_set[idx % number_gpu]
-        )
+            dataset, parameter, gpu_set[idx % number_gpu])
 
         print(command)
         p = subprocess.Popen(shlex.split(command))

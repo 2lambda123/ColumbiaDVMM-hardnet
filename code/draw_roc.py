@@ -95,10 +95,10 @@ if __name__ == "__main__":
             # fontsize of the figure title
             plt.rc("figure", titlesize=BIGGER_SIZE)
 
-            plt.plot(fpr_point, recall_list[0], "b", fpr_point, recall_list[1], "r")
-            plt.suptitle(
-                "Epoch: {:02d} Iter: {:04d}".format(epoch, iter_num), fontsize=24
-            )
+            plt.plot(fpr_point, recall_list[0], "b", fpr_point, recall_list[1],
+                     "r")
+            plt.suptitle("Epoch: {:02d} Iter: {:04d}".format(epoch, iter_num),
+                         fontsize=24)
             plt.ylim([0.0, 1.0])
             plt.xlim([0, 0.5])
             plt.xlabel("FPR(%)")
@@ -110,9 +110,8 @@ if __name__ == "__main__":
             except:
                 os.makedirs("../roc/" + setting)
 
-            plt.savefig(
-                "../roc/" + setting + "/" + file_t[0:-4] + ".png", bbox_inches="tight"
-            )
+            plt.savefig("../roc/" + setting + "/" + file_t[0:-4] + ".png",
+                        bbox_inches="tight")
             plt.clf()
             # break
             # plt.show()
