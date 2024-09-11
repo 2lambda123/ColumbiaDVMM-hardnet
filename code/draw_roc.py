@@ -15,6 +15,13 @@ import plotly.plotly as py
 
 
 def ROC_Curve(labels, scores, fpr_point):
+    """
+
+    :param labels: 
+    :param scores: 
+    :param fpr_point: 
+
+    """
     recall_point = []
 
     # Sort label-score tuples by the score in descending order.

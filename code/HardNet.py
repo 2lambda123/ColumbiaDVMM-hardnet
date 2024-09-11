@@ -50,10 +50,16 @@ import plotly.plotly as py
 
 
 class CorrelationPenaltyLoss(nn.Module):
+    """ """
     def __init__(self):
         super(CorrelationPenaltyLoss, self).__init__()
 
     def forward(self, input):
+        """
+
+        :param input: 
+
+        """
         mean1 = torch.mean(input, dim=0)
         zeroed = input - mean1.expand_as(input)
         cor_mat = torch.bmm(torch.t(zeroed).unsqueeze(0), zeroed.unsqueeze(0)).squeeze(
@@ -269,10 +275,11 @@ np.random.seed(args.seed)
 
 
 class TripletPhotoTour(dset.PhotoTour):
-    """
-    From the PhotoTour Dataset it generates triplet samples
+    """From the PhotoTour Dataset it generates triplet samples
     note: a triplet is composed by a pair of matching images and one of
     different class.
+
+
     """
 
     def __init__(
@@ -297,7 +304,18 @@ class TripletPhotoTour(dset.PhotoTour):
 
     @staticmethod
     def generate_triplets(labels, num_triplets):
+        """
+
+        :param labels: 
+        :param num_triplets: 
+
+        """
         def create_indices(_labels):
+            """
+
+            :param _labels: 
+
+            """
             inds = dict()
             for idx, ind in enumerate(_labels):
                 if ind not in inds:
@@ -335,6 +353,11 @@ class TripletPhotoTour(dset.PhotoTour):
 
     def __getitem__(self, index):
         def transform_img(img):
+            """
+
+            :param img: 
+
+            """
             if self.transform is not None:
                 img = self.transform(img.numpy())
             return img
@@ -411,6 +434,11 @@ class HardNet(nn.Module):
         return
 
     def input_norm(self, x):
+        """
+
+        :param x: 
+
+        """
         flat = x.view(x.size(0), -1)
         mp = torch.sum(flat, dim=1) / (32.0 * 32.0)
         sp = torch.std(flat, dim=1) + 1e-7
@@ -419,12 +447,22 @@ class HardNet(nn.Module):
         ) / sp.unsqueeze(-1).unsqueeze(-1).unsqueeze(1).expand_as(x)
 
     def forward(self, input):
+        """
+
+        :param input: 
+
+        """
         x_features = self.features(self.input_norm(input))
         x = x_features.view(x_features.size(0), -1)
         return L2Norm()(x)
 
 
 def weights_init(m):
+    """
+
+    :param m: 
+
+    """
     if isinstance(m, nn.Conv2d):
         nn.init.orthogonal(m.weight.data, gain=0.7)
         try:
@@ -435,6 +473,11 @@ def weights_init(m):
 
 
 def create_loaders(load_random_triplets=False):
+    """
+
+    :param load_random_triplets:  (Default value = False)
+
+    """
 
     test_dataset_names = copy.copy(dataset_names)
     test_dataset_names.remove(args.training_set)
@@ -495,6 +538,17 @@ def create_loaders(load_random_triplets=False):
 def train(
     train_loader, test_loaders, model, optimizer, epoch, logger, load_triplets=False
 ):
+    """
+
+    :param train_loader: 
+    :param test_loaders: 
+    :param model: 
+    :param optimizer: 
+    :param epoch: 
+    :param logger: 
+    :param load_triplets:  (Default value = False)
+
+    """
     # switch to train mode
     model.train()
     pbar = tqdm(enumerate(train_loader))
@@ -593,6 +647,16 @@ def train(
 
 
 def test(test_loader, model, epoch, iteration, logger, logger_test_name):
+    """
+
+    :param test_loader: 
+    :param model: 
+    :param epoch: 
+    :param iteration: 
+    :param logger: 
+    :param logger_test_name: 
+
+    """
     # switch to evaluate mode
     model.eval()
 
@@ -709,6 +773,9 @@ def test(test_loader, model, epoch, iteration, logger, logger_test_name):
 def adjust_learning_rate(optimizer):
     """Updates the learning rate given the learning rate decay.
     The routine has been implemented according to the original Lua SGD optimizer
+
+    :param optimizer: 
+
     """
     for group in optimizer.param_groups:
         if "step" not in group:
@@ -725,6 +792,12 @@ def adjust_learning_rate(optimizer):
 
 
 def create_optimizer(model, new_lr):
+    """
+
+    :param model: 
+    :param new_lr: 
+
+    """
     # setup optimizer
     if args.optimizer == "sgd":
         optimizer = optim.SGD(
@@ -742,6 +815,15 @@ def create_optimizer(model, new_lr):
 
 
 def main(train_loader, test_loaders, model, logger, file_logger):
+    """
+
+    :param train_loader: 
+    :param test_loaders: 
+    :param model: 
+    :param logger: 
+    :param file_logger: 
+
+    """
     # print the experiment configuration
     print("\nparsed options:\n{}\n".format(vars(args)))
 

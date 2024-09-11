@@ -21,6 +21,7 @@ import scipy.io as sio
 
 
 def usage():
+    """ """
     print >> sys.stderr
     sys.exit(1)
 
